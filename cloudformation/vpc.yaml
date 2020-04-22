@@ -1,0 +1,52 @@
+---
+Description: 
+  Creates sample VPC with public subnet and bucket for project.
+
+
+Parameters:
+  ProjectName:
+    Description: Name of project.  Must be lowercase.
+    Type: String
+    
+
+Resources:
+  DemoVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      Tags: 
+        - Key: Name
+          Value: !Join ['-', [!Ref ProjectName, DemoVPC ]]
+
+  DemoRouteTablePrivate:
+    Type: AWS::EC2::RouteTable
+    DependsOn: 
+      - DemoVPC
+    Properties:
+      VpcId: !Ref DemoVPC
+      Tags: 
+        - Key: Name
+          Value: !Join ['-', [!Ref ProjectName, DemoRouteTablePrivate ]]
+
+  DemoPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref DemoVPC
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [ !Ref ProjectName, DemoPrivateSubnet ]]
+
+
+Outputs:
+  DemoVPCOP:
+    Value: !Ref DemoVPC
+    Export:
+      Name: DemoVPCOutput
+  
+  DemoRouteTablePrivateOP:
+    Value: !Ref DemoRouteTablePrivate
+    Export:
+      Name: DemoRouteTablePrivateOutput

@@ -1,0 +1,83 @@
+---
+Parameters:
+  DemoVPC:
+    Description: Project vpc id
+    Type: String
+    
+  DemoRouteTablePrivate:
+    Description: Private route table id
+    Type: String
+    
+
+Resource:
+  S3Bucket1:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: sample-secure-bucket-version-1
+
+  S3Bucket2:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: sample-secure-bucket-version-2
+
+  ProjectVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    DependsOn: S3Bucket1
+    Properties:
+      RouteTableIds:
+        - !Ref DemoRouteTablePrivate
+      VpcEndpointType: Gateway
+      VpcId: !Ref DemoVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+
+  BucketPolicy1:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: S3Bucket1
+    Properties: 
+      Bucket: !Ref S3Bucket1
+      PolicyDocument:
+        !Sub |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "VPCE-only",
+                "Principal": "*",
+                "Action": "s3:*",
+                "Effect": "Deny",
+                "Resource": ["arn:aws:s3:::${!Ref S3Bucket1}",
+                            "arn:aws:s3:::${!Ref S3Bucket1}/*"],
+                "Condition": {
+                  "StringNotEquals": {
+                    "aws:sourceVpce": "${!Ref ProjectVPCEndpoint}"
+                  }
+                }
+              }
+            ]
+          }
+
+  BucketPolicy2:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: S3Bucket2
+    Properties: 
+      Bucket: !Ref S3Bucket2
+      PolicyDocument: 
+        !Sub |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "VPC-only",
+                "Principal": "*",
+                "Action": "s3:*",
+                "Effect": "Deny",
+                "Resource": ["arn:aws:s3:::${!Ref S3Bucket2}",
+                            "arn:aws:s3:::${!Ref S3Bucket2}/*"],
+                "Condition": {
+                  "StringNotEquals": {
+                    "aws:sourceVpc": "vpc-sample"
+                  }
+                }
+              }
+            ]
+          }
